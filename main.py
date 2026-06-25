@@ -5,7 +5,6 @@ from sklearn.decomposition import PCA
 from expectation_maximization import ExpectationMaximization
 from data import generate_synthetic_gene_expression_data
 
-
 X = generate_synthetic_gene_expression_data()
 # =====================================================
 # CREATE EM MODEL
