@@ -39,7 +39,7 @@ expectation-maximization/
 Clone the repository:
 
 ```bash
-git clone https://github.com/<your-username>/expectation-maximization.git
+git clone https://github.com/Goat8/expectationMaximisation.git/expectation-maximization.git
 
 cd expectation-maximization
 ```

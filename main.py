@@ -4,7 +4,9 @@ from sklearn.decomposition import PCA
 
 from expectation_maximization import ExpectationMaximization
 from data import generate_synthetic_gene_expression_data
+import os
 
+os.makedirs("images", exist_ok=True)
 X = generate_synthetic_gene_expression_data()
 # =====================================================
 # CREATE EM MODEL
@@ -109,7 +111,16 @@ plt.title("EM Convergence")
 plt.xlabel("Iteration")
 plt.ylabel("Log Likelihood")
 plt.grid(True)
+
+
+plt.savefig(
+    "images/log_likelihood.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
+plt.close()
 
 # =====================================================
 # VISUALIZATION 2
@@ -129,8 +140,16 @@ plt.title(
 plt.xlabel("Iteration")
 plt.ylabel("P(Cluster 0)")
 plt.grid(True)
-plt.show()
 
+plt.savefig(
+    "images/responsibility_evolution.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+
+plt.show()
+plt.close()
 # =====================================================
 # VISUALIZATION 3
 # CLUSTER MEAN EVOLUTION
@@ -155,8 +174,15 @@ plt.xlabel("Iteration")
 plt.ylabel("Mean Value")
 plt.legend()
 plt.grid(True)
-plt.show()
 
+plt.savefig(
+    "images/cluster_mean_evolution.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+plt.close()
 # =====================================================
 # PCA VISUALIZATION
 # =====================================================
@@ -174,7 +200,13 @@ plt.scatter(
 plt.title("Before EM")
 plt.xlabel("PC1")
 plt.ylabel("PC2")
+plt.savefig(
+    "images/pca_before_em.png",
+    dpi=300,
+    bbox_inches="tight"
+)
 plt.show()
+plt.close()
 
 plt.figure(figsize=(7,6))
 
@@ -189,4 +221,10 @@ plt.title("Gene Clusters After EM")
 plt.xlabel("Principal Component 1")
 plt.ylabel("Principal Component 2")
 plt.colorbar(label="Cluster")
+plt.savefig(
+    "images/pca_after_em.png",
+    dpi=300,
+    bbox_inches="tight"
+)
 plt.show()
+plt.close()
