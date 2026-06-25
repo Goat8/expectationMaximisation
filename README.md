@@ -132,29 +132,6 @@ First 10 assignments:
 
 ---
 
-## Learning Objectives
-
-This project demonstrates:
-- Expectation-Maximization (EM)
-- Soft clustering
-- Maximum likelihood estimation
-- Multivariate Gaussian distributions
-- Probability-based clustering
-
----
-
-## Future Improvements
-
-- Support multiple covariance matrices
-- Random parameter initialization
-- K-Means initialization
-- Predict method for unseen samples
-- Model selection using AIC/BIC
-- Real-world gene expression datasets
-- Gene regulatory network inference
-
----
-
 ## License
 
 This project is intended for educational and research purposes.
