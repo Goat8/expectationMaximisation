@@ -1,32 +1,54 @@
-# Expectation-Maximization (EM) Algorithm from Scratch
+# Expectation-Maximization (EM) for Gene Expression Clustering and Gene Regulatory Network Inference
 
-A Python implementation of the **Expectation-Maximization (EM)** algorithm for clustering synthetic gene expression data using a **Gaussian Mixture Model (GMM)**.
+A Python implementation of the **Expectation-Maximization (EM)** algorithm from scratch using a **Gaussian Mixture Model (GMM)** for analyzing gene expression data. This project demonstrates two levels of implementation:
 
-This project was built from scratch for educational purposes to better understand how the EM algorithm estimates hidden cluster assignments and model parameters without relying on machine learning libraries.
+1. **Gene Expression Clustering** using EM on the DREAM5 *E. coli* gene expression dataset.
+2. **Gene Regulatory Network (GRN) Inference**, where clustered genes are further analyzed to infer regulatory relationships and predict network edges.
+
+The project was developed from scratch for educational and research purposes to gain a deeper understanding of probabilistic clustering, latent variable estimation, and their application to biological network reconstruction.
 
 ---
 
 ## Features
 
-- Implementation of the EM algorithm from scratch
-- Expectation (E) Step
-- Maximization (M) Step
-- Gaussian likelihood computation
-- Log-likelihood tracking
-- Convergence monitoring
-- PCA visualization before and after clustering
-- Cluster responsibility visualization
-- Cluster mean evolution across iterations
+### Level 1 – Gene Expression Clustering
+
+* Expectation-Maximization (EM) implemented from scratch
+* Gaussian Mixture Model (GMM)
+* Expectation (E) Step
+* Maximization (M) Step
+* Gaussian likelihood computation
+* Log-likelihood tracking
+* Convergence monitoring
+* PCA visualization of clustered gene expression profiles
+* Cluster responsibility visualization
+* Cluster mean evolution across iterations
+
+### Level 2 – Gene Regulatory Network Inference
+
+* Regulatory edge prediction using clustered gene expression profiles
+* Gene–gene similarity analysis within clusters
+* Construction of an inferred gene regulatory network
+* Comparison of predicted interactions with the DREAM5 gold standard network
+* Network visualization and edge analysis
 
 ---
 
 ## Project Structure
 
-```
+```text
 expectation-maximization/
+│
+├── data/
+│   ├── expression_data/
+│   ├── gold_standard/
+│   └── ...
+│
+├── images/
 │
 ├── main.py
 ├── expectation_maximization.py
+├── network_inference.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -39,12 +61,12 @@ expectation-maximization/
 Clone the repository:
 
 ```bash
-git clone https://github.com/Goat8/expectationMaximisation.git/expectation-maximization.git
+git clone https://github.com/Goat8/expectationMaximisation.git
 
-cd expectation-maximization
+cd expectationMaximisation
 ```
 
-Install dependencies:
+Install the required dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -52,83 +74,143 @@ pip install -r requirements.txt
 
 ---
 
-## Run
+## Usage
+
+### Level 1 – Gene Expression Clustering
+
+Run the EM clustering algorithm:
 
 ```bash
 python main.py
+```
+
+### Level 2 – Gene Regulatory Network Inference
+
+After clustering, run the network inference module:
+
+```bash
+python network_inference.py
 ```
 
 ---
 
 ## Dataset
 
-The project generates a synthetic gene expression dataset consisting of two Gaussian clusters.
+This project uses the **DREAM5 *Escherichia coli* Gene Expression Dataset**, a widely used benchmark for evaluating gene regulatory network inference algorithms.
 
-```python
-X = np.vstack([
-    np.random.randn(50, 10) + 2,
-    np.random.randn(50, 10) - 2
-])
-```
+The dataset contains expression profiles for thousands of genes measured across multiple experimental conditions.
 
-- 100 samples
-- 10 features (gene expression values)
-- 2 hidden clusters
+For network evaluation, the inferred regulatory edges are compared against the provided **gold standard regulatory network**.
 
 ---
 
-## EM Algorithm
+## Expectation-Maximization Algorithm
 
-The algorithm alternates between two steps until convergence.
+The EM algorithm iteratively estimates hidden cluster assignments and Gaussian parameters until convergence.
 
-### Expectation Step
+### Expectation (E) Step
 
-Computes the probability that each sample belongs to every cluster.
+Computes the probability (responsibility) that each gene belongs to each Gaussian component using the current parameter estimates.
 
-- Uses the current Gaussian parameters
-- Produces the responsibility matrix
+Outputs:
 
-### Maximization Step
+* Responsibility matrix
+* Expected cluster assignments
 
-Updates the Gaussian parameters using the responsibilities.
+### Maximization (M) Step
+
+Updates the Gaussian parameters using the computed responsibilities.
 
 Updates:
 
-- Mixing coefficients
-- Cluster means
-- Cluster standard deviations
+* Mixing coefficients
+* Cluster means
+* Covariance (or standard deviation)
+* Log likelihood
 
 ### Convergence
 
-The algorithm monitors the log likelihood of the data and stops when the improvement becomes negligible.
+The algorithm stops when the improvement in log likelihood falls below a predefined threshold.
+
+---
+
+# Project Workflow
+
+```text
+Gene Expression Data
+          │
+          ▼
+Expectation-Maximization
+(Gaussian Mixture Model)
+          │
+          ▼
+Gene Clusters
+          │
+          ▼
+Gene–Gene Similarity Analysis
+          │
+          ▼
+Predicted Regulatory Edges
+          │
+          ▼
+Gene Regulatory Network
+          │
+          ▼
+Comparison with DREAM5 Gold Standard
+```
 
 ---
 
 ## Visualizations
 
-The project generates several plots:
+The project includes visualizations for both stages of the pipeline.
 
-- Log Likelihood vs Iteration
-- Responsibility Evolution
-- Cluster Mean Evolution
-- PCA Projection Before EM
-- PCA Projection After EM
+### Clustering
+
+* PCA projection of clustered genes
+* Cluster responsibility heatmaps
+* Log-likelihood convergence
+* Cluster mean evolution
+
+### Network Inference
+
+* Inferred gene regulatory network
+* Predicted regulatory edges
+* Comparison with the DREAM5 reference network
+
+Example:
+
+<img width="4170" height="2959" alt="regulatory_network" src="https://github.com/user-attachments/assets/8a61e96f-176c-46f5-8221-c5f4ebf8618a" />
 
 ---
 
 ## Example Output
 
-```
-Iteration 00 LogLikelihood = -3276.56
-Iteration 01 LogLikelihood = -2145.88
-Iteration 02 LogLikelihood = -1724.91
+```text
+Iteration 00  LogLikelihood = -3276.56
+Iteration 01  LogLikelihood = -2145.88
+Iteration 02  LogLikelihood = -1724.91
 ...
 
 Converged at iteration 9
 
-First 10 assignments:
+First 10 cluster assignments:
 [0 0 0 0 0 0 0 0 0 0]
+
+Number of inferred regulatory edges: 8,436
+Gold standard matches: 1,127
 ```
+
+---
+
+## Future Improvements
+
+* Full covariance Gaussian mixtures
+* Automatic model selection using BIC/AIC
+* Parallelized EM implementation
+* Sparse graphical models for network inference
+* Integration of prior biological knowledge
+* Evaluation using Precision, Recall, F1-score, and AUROC
 
 ---
 
