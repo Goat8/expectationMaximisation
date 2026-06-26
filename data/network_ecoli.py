@@ -6,19 +6,19 @@ def load_dream5_ecoli(
     tf_path
 ):
     
-    # Load expression matrix
-    # Shape as downloaded: 805 conditions x 4511 genes
+    # loading expression matrix
+    # shape shoule be: 805 conditions x 4511 genes
     expr = pd.read_csv(
         expression_path,
         sep='\t',
         header=0
     )
     
-    # Transpose: we want genes x conditions (4511 x 805)
+    # need to take Transpose: we want genes x conditions (4511 x 805)
     X = expr.values.T.astype(float)
     gene_ids = list(expr.columns)
     
-    # Load gene names
+    # loading gene names
     gene_map = pd.read_csv(
         gene_ids_path,
         sep='\t',
@@ -33,14 +33,14 @@ def load_dream5_ecoli(
         id_to_name.get(g, g) for g in gene_ids
     ]
     
-    # Load transcription factors
+    # loading transcription factors
     tfs = pd.read_csv(
         tf_path,
         sep='\t',
         header=None
     )[0].tolist()
     
-    # Boolean mask: which genes are TFs
+    # boolean mask: which genes are TFs
     is_tf = [g in tfs for g in gene_ids]
     
     print(f"Loaded DREAM5 E. coli data:")

@@ -12,52 +12,38 @@ class ExpectationMaximization:
         self.cluster_means = None
         self.cluster_std = None
 
-    def expectation(
-        self,
-        data
-    ):
-        num_samples, num_features = data.shape
-
-        responsibilities = np.zeros(
-            (num_samples, self.num_clusters)
-        )
-
-        for cluster in range(self.num_clusters):
-
-            difference = (
-                data - self.cluster_means[cluster]
-            )
-
-            likelihood = np.exp(
-                -0.5 * np.sum(
-                    (
-                        difference
-                        / self.cluster_std[cluster]
-                    ) ** 2,
-                    axis=1
-                )
-            )
-
-            likelihood /= (
-                (
-                    2
-                    * np.pi
-                    * self.cluster_std[cluster] ** 2
-                ) ** (num_features / 2)
-            )
-
-            responsibilities[:, cluster] = (
-                self.mixing_coefficients[cluster]
-                * likelihood
-            )
-
-        responsibilities /= responsibilities.sum(
-            axis=1,
-            keepdims=True
-        )
-
-        return responsibilities
-
+    def expectation(self, data):
+      num_samples, num_features = data.shape
+      log_responsibilities = np.zeros(
+          (num_samples, self.num_clusters)
+      )
+      
+      for cluster in range(self.num_clusters):
+          difference = data - self.cluster_means[cluster]
+          
+          # Compute log likelihood directly — avoids overflow
+          log_likelihood = (
+              -0.5 * np.sum(
+                  (difference / self.cluster_std[cluster]) ** 2,
+                  axis=1
+              )
+              - (num_features / 2) * np.log(
+                  2 * np.pi * self.cluster_std[cluster] ** 2
+              )
+              + np.log(self.mixing_coefficients[cluster])
+          )
+          
+          log_responsibilities[:, cluster] = log_likelihood
+      
+      # Log-sum-exp trick for numerical stability
+      log_max = log_responsibilities.max(axis=1, keepdims=True)
+      log_responsibilities -= log_max
+      responsibilities = np.exp(log_responsibilities)
+      responsibilities /= responsibilities.sum(
+          axis=1, keepdims=True
+      )
+      
+      return responsibilities
  
     def maximization(
         self,
@@ -99,7 +85,7 @@ class ExpectationMaximization:
                 )
             )
 
-    def log_likelihood(
+    def log_likelihood2(
         self,
         data
     ):
@@ -141,3 +127,33 @@ class ExpectationMaximization:
         return np.sum(
             np.log(sample_probabilities)
         )
+
+    def log_likelihood(self, data):
+        num_samples, num_features = data.shape
+        log_probs = np.zeros(
+            (num_samples, self.num_clusters)
+        )
+        
+        for cluster in range(self.num_clusters):
+            difference = data - self.cluster_means[cluster]
+            log_probs[:, cluster] = (
+                -0.5 * np.sum(
+                    (difference / self.cluster_std[cluster]) ** 2,
+                    axis=1
+                )
+                - (num_features / 2) * np.log(
+                    2 * np.pi * self.cluster_std[cluster] ** 2
+                )
+                + np.log(self.mixing_coefficients[cluster])
+            )
+        
+        # Log-sum-exp per sample then sum
+        log_max = log_probs.max(axis=1)
+        log_likelihood = (
+            log_max
+            + np.log(
+                np.exp(log_probs - log_max[:, None]).sum(axis=1)
+            )
+        )
+        
+        return log_likelihood.sum()

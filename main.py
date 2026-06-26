@@ -10,12 +10,13 @@ import os
 os.makedirs("images", exist_ok=True)
 
 USE_REAL_DATA = True
+num_clusters = 5
 
 if USE_REAL_DATA:
     X, gene_names, gene_ids, is_tf = load_dream5_ecoli(
-        expression_path='data/net3_expression_data.tsv',
-        gene_ids_path='data/net3_gene_ids.tsv',
-        tf_path='data/net3_transcription_factors.tsv'
+        expression_path='data/network_ecoli/net3_expression_data.tsv',
+        gene_ids_path='data/network_ecoli/net3_gene_ids.tsv',
+        tf_path='data/network_ecoli/net3_transcription_factors.tsv'
     )
     # Standardize: zero mean, unit variance per gene
     scaler = StandardScaler()
@@ -30,20 +31,21 @@ else:
 # =====================================================
 # CREATE EM MODEL
 # =====================================================
-num_clusters = 2
 
 em = ExpectationMaximization(num_clusters)
 
 # =====================================================
 # INITIALIZE PARAMETERS
 # =====================================================
-em.mixing_coefficients = np.array([0.5, 0.5])
+# em.mixing_coefficients = np.array([0.5, 0.5])
+em.mixing_coefficients = np.ones(num_clusters) / num_clusters
 
-em.cluster_means = np.random.randn(
-    num_clusters,
-    X.shape[1]
-)
-
+# em.cluster_means = np.random.randn(
+#     num_clusters,
+#     X.shape[1]
+# )
+random_indices = np.random.choice(X.shape[0], num_clusters, replace=False)
+em.cluster_means = X[random_indices].copy()
 em.cluster_std = np.ones(num_clusters)
 
 # =====================================================
@@ -247,3 +249,27 @@ plt.savefig(
 )
 plt.show()
 plt.close()
+
+# =====================================================
+# BIOLOGICAL INTERPRETATION
+# TF ENRICHMENT PER CLUSTER
+# =====================================================
+print("\n=== FINAL CLUSTER SUMMARY ===")
+is_tf_array = np.array(is_tf)
+
+for k in range(num_clusters):
+    cluster_mask = clusters == k
+    cluster_size = cluster_mask.sum()
+    tf_in_cluster = (cluster_mask & is_tf_array).sum()
+    tf_enrichment = tf_in_cluster / cluster_size * 100
+    
+    # top 5 gene names in this cluster
+    cluster_gene_names = [
+        gene_names[i] 
+        for i in range(len(gene_names)) 
+        if cluster_mask[i]
+    ][:5]
+    
+    print(f"Cluster {k}: {cluster_size} genes | "
+          f"TFs: {tf_in_cluster} ({tf_enrichment:.1f}%) | "
+          f"samples: {cluster_gene_names}")
