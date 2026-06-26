@@ -1,13 +1,32 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-
+from sklearn.preprocessing import StandardScaler
 from expectation_maximization import ExpectationMaximization
 from data import generate_synthetic_gene_expression_data
+from data import load_dream5_ecoli
 import os
 
 os.makedirs("images", exist_ok=True)
-X = generate_synthetic_gene_expression_data()
+
+USE_REAL_DATA = True
+
+if USE_REAL_DATA:
+    X, gene_names, gene_ids, is_tf = load_dream5_ecoli(
+        expression_path='data/net3_expression_data.tsv',
+        gene_ids_path='data/net3_gene_ids.tsv',
+        tf_path='data/net3_transcription_factors.tsv'
+    )
+    # Standardize: zero mean, unit variance per gene
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X.T).T
+    num_clusters = 5  # more clusters for real data
+else:
+    X = generate_synthetic_gene_expression_data()
+    gene_names = [f'Gene_{i}' for i in range(100)]
+    is_tf = [False] * 100
+    num_clusters = 2
+#X = generate_synthetic_gene_expression_data()
 # =====================================================
 # CREATE EM MODEL
 # =====================================================
