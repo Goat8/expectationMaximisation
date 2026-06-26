@@ -51,3 +51,16 @@ def load_dream5_ecoli(
     print(f"  Std expression: {X.std():.3f}")
     
     return X, gene_names, gene_ids, is_tf
+
+
+def load_gold_standard(gold_standard_path):
+    gs = pd.read_csv(
+        gold_standard_path,
+        sep='\t',
+        header=None,
+        names=['tf', 'target', 'label']
+    )
+    # Keep only positive edges (label == 1)
+    gs = gs[gs['label'] == 1]
+    print(f"Gold standard: {len(gs)} known regulatory edges")
+    return gs

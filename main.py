@@ -1,10 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from expectation_maximization import ExpectationMaximization
 from data import generate_synthetic_gene_expression_data
 from data import load_dream5_ecoli
+from data import load_gold_standard
+from EM_network_inference import EMNetworkInference
+import pandas as pd
+import networkx as nx
 import os
 
 os.makedirs("images", exist_ok=True)
@@ -273,3 +278,287 @@ for k in range(num_clusters):
     print(f"Cluster {k}: {cluster_size} genes | "
           f"TFs: {tf_in_cluster} ({tf_enrichment:.1f}%) | "
           f"samples: {cluster_gene_names}")
+    
+# =====================================================
+# GOLD STANDARD VALIDATION
+# =====================================================
+from data import load_gold_standard
+
+gs = load_gold_standard(
+    'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3_-_E__coli.tsv'
+)
+
+# Map gene IDs to cluster assignments
+gene_to_cluster = dict(zip(gene_ids, clusters))
+
+# For each known TF-target pair, check if same cluster
+same_cluster = 0
+total_pairs = 0
+
+for _, row in gs.iterrows():
+    tf = row['tf']
+    target = row['target']
+    if tf in gene_to_cluster and target in gene_to_cluster:
+        total_pairs += 1
+        if gene_to_cluster[tf] == gene_to_cluster[target]:
+            same_cluster += 1
+
+co_cluster_rate = same_cluster / total_pairs * 100
+
+print(f"\n=== GOLD STANDARD VALIDATION ===")
+print(f"Known regulatory pairs evaluated: {total_pairs}")
+print(f"Pairs in same cluster: {same_cluster}")
+print(f"Co-clustering rate: {co_cluster_rate:.2f}%")
+print(f"\nBaseline (random, 5 clusters): ~20.00%")
+print(f"Your model: {co_cluster_rate:.2f}%")
+
+if co_cluster_rate > 20:
+    print("Result: EM clusters are enriched for known regulatory pairs")
+else:
+    print("Result: clusters do not significantly recover known regulation")
+
+
+
+###3
+    
+##
+    
+    # =====================================================
+# LEVEL 2: NETWORK INFERENCE
+# =====================================================
+
+print("\n=== RUNNING EM NETWORK INFERENCE ===")
+
+# Get TF indices and IDs
+tf_indices = [
+    i for i, t in enumerate(is_tf) if t
+]
+tf_gene_ids = [
+    gene_ids[i] for i in tf_indices
+]
+
+print(f"Transcription factors: {len(tf_indices)}")
+print(f"Target genes: {len(gene_ids)}")
+
+# Run inference
+em_net = EMNetworkInference(
+    max_iter=50,
+    tol=1e-4,
+    edge_prior=0.1
+)
+
+all_edges = []
+
+# Run on first 100 genes for speed
+# (full run on 4511 genes takes hours)
+target_genes_to_run = 100
+
+for gene_idx in range(target_genes_to_run):
+    gene_expr = X[gene_idx]
+    gene_id = gene_ids[gene_idx]
+    
+    edges = em_net.infer_edges_for_gene(
+        gene_idx=gene_idx,
+        gene_expr=gene_expr,
+        tf_indices=tf_indices,
+        tf_gene_ids=tf_gene_ids,
+        X=X
+    )
+    
+    for edge in edges:
+        edge['target'] = gene_id
+        all_edges.append(edge)
+    
+    if gene_idx % 10 == 0:
+        print(f"Processed {gene_idx}/{target_genes_to_run} genes")
+
+# Convert to dataframe
+edges_df = pd.DataFrame(all_edges)
+
+# Sort by edge probability
+edges_df = edges_df.sort_values(
+    'edge_probability',
+    ascending=False
+)
+
+print(f"\nTop 20 predicted regulatory edges:")
+print(
+    edges_df[['tf','target','edge_probability','beta']]
+    .head(20)
+    .to_string()
+)
+
+# Save predicted network
+edges_df.to_csv(
+    'data/predicted_network.csv',
+    index=False
+)
+print(f"\nSaved {len(edges_df)} predicted edges")
+
+# =====================================================
+# NETWORK INFERENCE VISUALIZATIONS
+# =====================================================
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+
+# =====================================================
+# VIZ 1: EDGE PROBABILITY DISTRIBUTION
+# =====================================================
+plt.figure(figsize=(8, 4))
+plt.hist(
+    edges_df['edge_probability'],
+    bins=50,
+    color='#534AB7',
+    edgecolor='white',
+    linewidth=0.5
+)
+plt.axvline(
+    x=0.5,
+    color='red',
+    linestyle='--',
+    label='Decision threshold (0.5)'
+)
+plt.xlabel('Edge Probability P(Z=1 | X)')
+plt.ylabel('Number of TF-gene pairs')
+plt.title('Distribution of Inferred Regulatory Edge Probabilities')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('images/edge_probability_dist.png', dpi=300, bbox_inches='tight')
+plt.show()
+plt.close()
+
+# =====================================================
+# VIZ 2: TOP TFs BY NUMBER OF PREDICTED TARGETS
+# =====================================================
+high_conf_edges = edges_df[
+    edges_df['edge_probability'] > 0.5
+]
+
+tf_target_counts = (
+    high_conf_edges
+    .groupby('tf')['target']
+    .count()
+    .sort_values(ascending=False)
+    .head(15)
+)
+
+# Map gene IDs to names for readability
+id_to_name = dict(zip(gene_ids, gene_names))
+
+plt.figure(figsize=(10, 5))
+bars = plt.bar(
+    range(len(tf_target_counts)),
+    tf_target_counts.values,
+    color='#1D9E75'
+)
+plt.xticks(
+    range(len(tf_target_counts)),
+    [id_to_name.get(tf, tf) for tf in tf_target_counts.index],
+    rotation=45,
+    ha='right'
+)
+plt.xlabel('Transcription Factor')
+plt.ylabel('Number of Predicted Targets')
+plt.title('Top 15 TFs by Predicted Regulatory Targets\n(edge probability > 0.5)')
+plt.grid(True, alpha=0.3, axis='y')
+plt.tight_layout()
+plt.savefig('images/top_tfs.png', dpi=300, bbox_inches='tight')
+plt.show()
+plt.close()
+
+# =====================================================
+# VIZ 3: REGULATORY NETWORK GRAPH
+# Top 50 edges only for readability
+# =====================================================
+top_edges = edges_df.head(50)
+
+G = nx.DiGraph()
+
+for _, row in top_edges.iterrows():
+    tf_name = id_to_name.get(row['tf'], row['tf'])
+    target_name = id_to_name.get(row['target'], row['target'])
+    G.add_edge(
+        tf_name,
+        target_name,
+        weight=row['edge_probability']
+    )
+
+# Color TF nodes differently from target nodes
+tf_names = set(
+    id_to_name.get(tf, tf) for tf in tf_gene_ids
+)
+node_colors = [
+    '#534AB7' if node in tf_names else '#1D9E75'
+    for node in G.nodes()
+]
+node_sizes = [
+    800 if node in tf_names else 300
+    for node in G.nodes()
+]
+
+plt.figure(figsize=(14, 10))
+pos = nx.spring_layout(G, k=2, seed=42)
+nx.draw_networkx_nodes(
+    G, pos,
+    node_color=node_colors,
+    node_size=node_sizes,
+    alpha=0.9
+)
+nx.draw_networkx_edges(
+    G, pos,
+    edge_color='#AAAAAA',
+    arrows=True,
+    arrowsize=15,
+    width=1.5,
+    alpha=0.6
+)
+nx.draw_networkx_labels(
+    G, pos,
+    font_size=7,
+    font_color='white',
+    font_weight='bold'
+)
+
+# Legend
+legend_elements = [
+    Patch(facecolor='#534AB7', label='Transcription Factor'),
+    Patch(facecolor='#1D9E75', label='Target Gene')
+]
+plt.legend(handles=legend_elements, loc='upper left')
+plt.title('Inferred Regulatory Network\n(Top 50 edges by EM edge probability)')
+plt.axis('off')
+plt.tight_layout()
+plt.savefig('images/regulatory_network.png', dpi=300, bbox_inches='tight')
+plt.show()
+plt.close()
+
+# =====================================================
+# VIZ 4: BETA DISTRIBUTION
+# Positive beta = activation, negative = repression
+# =====================================================
+plt.figure(figsize=(8, 4))
+plt.hist(
+    high_conf_edges['beta'],
+    bins=40,
+    color='#378ADD',
+    edgecolor='white',
+    linewidth=0.5
+)
+plt.axvline(x=0, color='red', linestyle='--', label='Zero (no effect)')
+plt.xlabel('Regulatory Strength (β)')
+plt.ylabel('Number of edges')
+plt.title('Distribution of Regulatory Strength\n(positive = activation, negative = repression)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('images/beta_distribution.png', dpi=300, bbox_inches='tight')
+plt.show()
+plt.close()
+
+print("\n=== VISUALIZATION SUMMARY ===")
+print(f"Total predicted edges: {len(edges_df)}")
+print(f"High confidence edges (>0.5): {len(high_conf_edges)}")
+print(f"Predicted activations (beta>0): {(high_conf_edges['beta']>0).sum()}")
+print(f"Predicted repressions (beta<0): {(high_conf_edges['beta']<0).sum()}")
