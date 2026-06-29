@@ -284,9 +284,9 @@ for k in range(num_clusters):
 # =====================================================
 # GOLD STANDARD VALIDATION
 # =====================================================
-
+#DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv
 gs = load_gold_standard(
-    'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3_-_E__coli.tsv'
+    'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv'
 )
 
 # Map gene IDs to cluster assignments
@@ -603,9 +603,7 @@ bn_edges_df.to_csv(
 from data import load_gold_standard
 
 gs = load_gold_standard(
-    'data/network_ecoli/test/'
-    'DREAM5_NetworkInference_GoldStandard'
-    '_Network3_-_E__coli.tsv'
+    'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv'
 )
 
 gold_pairs = set(
@@ -638,3 +636,97 @@ print(f"\n=== COMPARISON ===")
 print(f"Random baseline (top 200): ~{200/152280*100:.2f}%")
 print(f"Pairwise EM precision: {em_precision:.2f}%")
 print(f"Bayesian Network precision: {bn_precision:.2f}%")
+
+
+
+# =====================================================
+# BAYESIAN NETWORK VISUALIZATION
+# =====================================================
+
+# Build directed graph from Bayesian Network edges
+BN_G = nx.DiGraph()
+
+# Use top 50 edges by BIC score
+top_bn_edges = bn_edges_df.head(50)
+
+id_to_name = dict(zip(gene_ids, gene_names))
+
+for _, row in top_bn_edges.iterrows():
+    tf_name = id_to_name.get(row['tf'], row['tf'])
+    target_name = id_to_name.get(
+        row['target'], row['target']
+    )
+    BN_G.add_edge(
+        tf_name,
+        target_name,
+        weight=row['bic_score']
+    )
+
+# Color nodes
+tf_name_set = set(
+    id_to_name.get(gene_ids[i], gene_ids[i])
+    for i in tf_indices
+)
+
+node_colors = [
+    '#534AB7' if node in tf_name_set else '#1D9E75'
+    for node in BN_G.nodes()
+]
+
+node_sizes = [
+    900 if node in tf_name_set else 400
+    for node in BN_G.nodes()
+]
+
+plt.figure(figsize=(16, 11))
+pos = nx.spring_layout(BN_G, k=2.5, seed=42)
+
+nx.draw_networkx_nodes(
+    BN_G, pos,
+    node_color=node_colors,
+    node_size=node_sizes,
+    alpha=0.9
+)
+nx.draw_networkx_edges(
+    BN_G, pos,
+    edge_color='#AAAAAA',
+    arrows=True,
+    arrowsize=20,
+    arrowstyle='-|>',
+    width=1.5,
+    alpha=0.7,
+    connectionstyle='arc3,rad=0.1'
+)
+nx.draw_networkx_labels(
+    BN_G, pos,
+    font_size=7,
+    font_color='white',
+    font_weight='bold'
+)
+
+from matplotlib.patches import Patch
+legend_elements = [
+    Patch(facecolor='#534AB7', label='Transcription Factor'),
+    Patch(facecolor='#1D9E75', label='Target Gene')
+]
+plt.legend(
+    handles=legend_elements,
+    loc='upper left',
+    fontsize=10
+)
+
+plt.title(
+    'Bayesian Network — Inferred Gene Regulatory Network\n'
+    '(Top 50 edges by BIC score, Friedman 2004 approach)',
+    fontsize=13
+)
+plt.axis('off')
+plt.tight_layout()
+plt.savefig(
+    'images/bayesian_network.png',
+    dpi=300,
+    bbox_inches='tight'
+)
+plt.show()
+plt.close()
+print("Saved: images/bayesian_network.png")
