@@ -7,6 +7,8 @@ from expectation_maximization import ExpectationMaximization
 from data import generate_synthetic_gene_expression_data
 from data import load_dream5_ecoli
 from data import load_gold_standard
+from data import load_gold_standard
+from bayesian_network import BayesianNetworkGRN
 from EM_network_inference import EMNetworkInference
 import pandas as pd
 import networkx as nx
@@ -282,7 +284,6 @@ for k in range(num_clusters):
 # =====================================================
 # GOLD STANDARD VALIDATION
 # =====================================================
-from data import load_gold_standard
 
 gs = load_gold_standard(
     'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3_-_E__coli.tsv'
@@ -323,8 +324,8 @@ else:
     
 ##
     
-    # =====================================================
-# LEVEL 2: NETWORK INFERENCE
+# =====================================================
+# NETWORK INFERENCE
 # =====================================================
 
 print("\n=== RUNNING EM NETWORK INFERENCE ===")
@@ -388,7 +389,7 @@ print(
     .to_string()
 )
 
-# Save predicted network
+# Saving predicted network in csv
 edges_df.to_csv(
     'data/predicted_network.csv',
     index=False
@@ -398,12 +399,9 @@ print(f"\nSaved {len(edges_df)} predicted edges")
 # =====================================================
 # NETWORK INFERENCE VISUALIZATIONS
 # =====================================================
-import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
 
 # =====================================================
-# VIZ 1: EDGE PROBABILITY DISTRIBUTION
+# EDGE PROBABILITY DISTRIBUTION
 # =====================================================
 plt.figure(figsize=(8, 4))
 plt.hist(
@@ -430,7 +428,7 @@ plt.show()
 plt.close()
 
 # =====================================================
-# VIZ 2: TOP TFs BY NUMBER OF PREDICTED TARGETS
+# TOP TFs BY NUMBER OF PREDICTED TARGETS
 # =====================================================
 high_conf_edges = edges_df[
     edges_df['edge_probability'] > 0.5
@@ -535,7 +533,7 @@ plt.show()
 plt.close()
 
 # =====================================================
-# VIZ 4: BETA DISTRIBUTION
+# BETA DISTRIBUTION
 # Positive beta = activation, negative = repression
 # =====================================================
 plt.figure(figsize=(8, 4))
@@ -562,3 +560,81 @@ print(f"Total predicted edges: {len(edges_df)}")
 print(f"High confidence edges (>0.5): {len(high_conf_edges)}")
 print(f"Predicted activations (beta>0): {(high_conf_edges['beta']>0).sum()}")
 print(f"Predicted repressions (beta<0): {(high_conf_edges['beta']<0).sum()}")
+
+
+# =====================================================
+# LEVEL 3: BAYESIAN NETWORK STRUCTURE LEARNING
+# (Friedman 2004 approach)
+
+print("\n=== FRIEDMAN BAYESIAN NETWORK INFERENCE ===")
+
+bn = BayesianNetworkGRN(
+    X=X,
+    gene_ids=gene_ids,
+    tf_indices=tf_indices
+)
+
+bn_edges = bn.infer_network(
+    target_genes=100,
+    max_parents=3,
+    verbose=True
+)
+
+bn_edges_df = pd.DataFrame(bn_edges)
+bn_edges_df = bn_edges_df.sort_values(
+    'bic_score', ascending=False
+)
+
+print(f"\nTop 20 predicted edges (Bayesian Network):")
+print(
+    bn_edges_df[['tf','target','bic_score','n_parents']]
+    .head(20)
+    .to_string()
+)
+
+bn_edges_df.to_csv(
+    'data/bayesian_network_edges.csv',
+    index=False
+)
+
+# =====================================================
+# COMPARING: PAIRWISE EM vs BAYESIAN NETWORK
+# =====================================================
+from data import load_gold_standard
+
+gs = load_gold_standard(
+    'data/network_ecoli/test/'
+    'DREAM5_NetworkInference_GoldStandard'
+    '_Network3_-_E__coli.tsv'
+)
+
+gold_pairs = set(
+    zip(gs['tf'], gs['target'])
+)
+
+def compute_precision(predicted_df, tf_col, target_col, top_k=200):
+    top_edges = predicted_df.head(top_k)
+    hits = sum(
+        1 for _, row in top_edges.iterrows()
+        if (row[tf_col], row[target_col]) in gold_pairs
+    )
+    return hits / top_k * 100
+
+# precision of pairwise EM
+em_precision = compute_precision(
+    edges_df.sort_values(
+        'edge_probability', ascending=False
+    ),
+    'tf', 'target', top_k=200
+)
+
+# checking precision of Bayesian Network
+bn_precision = compute_precision(
+    bn_edges_df,
+    'tf', 'target', top_k=200
+)
+
+print(f"\n=== COMPARISON ===")
+print(f"Random baseline (top 200): ~{200/152280*100:.2f}%")
+print(f"Pairwise EM precision: {em_precision:.2f}%")
+print(f"Bayesian Network precision: {bn_precision:.2f}%")
