@@ -18,9 +18,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-
+import networkx as nx
 from expectation_maximization import ExpectationMaximization
-from network_inference import EMNetworkInference
+from EM_network_inference import EMNetworkInference
 from bayesian_network import BayesianNetworkGRN
 
 np.random.seed(7)
@@ -200,19 +200,43 @@ plt.savefig("toy_images/toy_overview.png", dpi=200, bbox_inches="tight")
 plt.close()
 print("\nSaved: toy_images/toy_overview.png")
 
-import networkx as nx
-G = nx.DiGraph()
+
+G_truth = nx.DiGraph()
 for (tf, tgt), kind in GROUND_TRUTH.items():
-    G.add_edge(tf, tgt)
-plt.figure(figsize=(6.5, 5.5))
-pos = nx.spring_layout(G, seed=3, k=1.3)
-node_colors = ["#534AB7" if n in ["TF_A", "TF_B"] else "#1D9E75" for n in G.nodes()]
-nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=2600,
-        font_color="white", font_weight="bold", font_size=11, arrows=True, arrowsize=22, width=1.8)
-plt.title("Ground Truth Network (built into toy data)")
-plt.tight_layout()
-plt.savefig("toy_images/ground_truth_network.png", dpi=200, bbox_inches="tight")
-plt.close()
-print("Saved: toy_images/ground_truth_network.png")
+    G_truth.add_edge(tf, tgt)
+
+# --- Level 2 inferred network (top 4 edges by probability, regardless of correctness) ---
+G_l2 = nx.DiGraph()
+for _, row in l2_df.head(4).iterrows():
+    G_l2.add_edge(row["tf"], row["target"])
+
+# --- Level 3 inferred network (everything BayesianNetworkGRN actually selected) ---
+G_l3 = nx.DiGraph()
+for _, row in bn_df.iterrows():
+    G_l3.add_edge(row["tf"], row["target"])
+
+def draw_network(G, title, filename, true_edges=GROUND_TRUTH):
+    plt.figure(figsize=(6.5, 5.5))
+    pos = nx.spring_layout(G, seed=3, k=1.3) if len(G.edges) > 0 else {g: (0, 0) for g in genes}
+    node_colors = ["#534AB7" if n in ["TF_A", "TF_B"] else "#1D9E75" for n in G.nodes()]
+
+    # Color edges: green if matches ground truth, red if a false positive
+    edge_colors = []
+    for u, v in G.edges():
+        edge_colors.append("#1D9E75" if (u, v) in true_edges else "#D85A30")
+
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=2600)
+    nx.draw_networkx_labels(G, pos, font_color="white", font_weight="bold", font_size=11)
+    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, arrows=True, arrowsize=22, width=1.8)
+    plt.title(title)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.savefig(f"toy_images/{filename}", dpi=200, bbox_inches="tight")
+    plt.close()
+    print(f"Saved: toy_images/{filename}")
+
+draw_network(G_truth, "Ground Truth Network\n(built into toy data)", "ground_truth_network.png")
+draw_network(G_l2, "Level 2 Inferred Network\n(top 4 edges by probability)\ngreen = correct, orange = false positive", "level2_inferred_network.png")
+draw_network(G_l3, "Level 3 Inferred Network\n(Bayesian Network, all selected edges)\ngreen = correct, orange = false positive", "level3_inferred_network.png")
 
 print("\nDONE. Toy example complete — all three levels used the actual production classes.")
