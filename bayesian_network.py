@@ -92,8 +92,7 @@ class BayesianNetworkGRN:
                     best_new_score = score
                     best_new_parent = tf_idx
             
-            if best_new_parent is None:
-                # No improvement — stop
+            if best_new_parent is None: # not improving gotta stop
                 break
                 
             current_parents.append(best_new_parent)
@@ -115,7 +114,7 @@ class BayesianNetworkGRN:
         verbose=True
     ):
         """
-        Run greedy hill climbing for each target gene.
+        running greedy hill climbing for each target gene.
         Returns predicted edges as a list of (TF, target, BIC_score).
         """
         edges = []
