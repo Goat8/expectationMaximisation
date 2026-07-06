@@ -80,7 +80,7 @@ em = ExpectationMaximization(num_clusters=K)
 em.mixing_coefficients = np.ones(K) / K
 init_idx = [0, 5]  # TF_A and Gene_4 as initial centers
 em.cluster_means = X[init_idx].copy()
-em.cluster_std = np.ones(K) * X.std()
+em.cluster_var = np.tile(np.ones(X.shape[1]) * X.std() ** 2, (K, 1))
 
 print(f"\nInitial means (gene indices {init_idx}): {[genes[i] for i in init_idx]}")
 

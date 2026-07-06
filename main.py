@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from expectation_maximization import ExpectationMaximization
+from expectation_maximization import ExpectationMaximization, run_em
 from data import generate_synthetic_gene_expression_data
 from data import load_dream5_ecoli
 from data import load_gold_standard
@@ -36,7 +36,7 @@ else:
     num_clusters = 2
 #X = generate_synthetic_gene_expression_data()
 # =====================================================
-# CREATE EM MODEL
+# SIMPLE EM MODEL
 # =====================================================
 
 em = ExpectationMaximization(num_clusters)
@@ -71,252 +71,254 @@ responsibility_history = []
 # =====================================================
 previous_log_likelihood = -np.inf
 
-for iteration in range(100):
+# for iteration in range(100):
 
-    responsibilities = em.expectation(X)
+#     responsibilities = em.expectation(X)
 
-    responsibility_history.append(
-        responsibilities[sample_index, 0]
-    )
+#     responsibility_history.append(
+#         responsibilities[sample_index, 0]
+#     )
 
-    em.maximization(
-        X,
-        responsibilities
-    )
+#     em.maximization(
+#         X,
+#         responsibilities
+#     )
 
-    cluster_mean_history.append(
-        em.cluster_means.copy()
-    )
+#     cluster_mean_history.append(
+#         em.cluster_means.copy()
+#     )
 
-    current_log_likelihood = em.log_likelihood(X)
+#     current_log_likelihood = em.log_likelihood(X)
 
-    log_likelihood_history.append(
-        current_log_likelihood
-    )
+#     log_likelihood_history.append(
+#         current_log_likelihood
+#     )
 
-    print(
-        f"Iteration {iteration:02d} "
-        f"LogLikelihood = "
-        f"{current_log_likelihood:.4f}"
-    )
+#     print(
+#         f"Iteration {iteration:02d} "
+#         f"LogLikelihood = "
+#         f"{current_log_likelihood:.4f}"
+#     )
 
-    if abs(
-        current_log_likelihood
-        - previous_log_likelihood
-    ) < 1e-6:
+#     if abs(
+#         current_log_likelihood
+#         - previous_log_likelihood
+#     ) < 1e-6:
 
-        print(
-            f"\nConverged at iteration {iteration}"
-        )
+#         print(
+#             f"\nConverged at iteration {iteration}"
+#         )
 
-        break
+#         break
 
-    previous_log_likelihood = (
-        current_log_likelihood
-    )
+#     previous_log_likelihood = (
+#         current_log_likelihood
+#     )
 
-# =====================================================
-# FINAL CLUSTER ASSIGNMENTS
-# =====================================================
-clusters = responsibilities.argmax(axis=1)
-
-print("\nFirst 10 assignments:")
-
-print(clusters[:10])
-
-# =====================================================
-# VISUALIZATION 1
-# LOG LIKELIHOOD
-# =====================================================
-plt.figure(figsize=(6,4))
-
-plt.plot(
-    log_likelihood_history,
-    marker="o"
-)
-
-plt.title("EM Convergence")
-plt.xlabel("Iteration")
-plt.ylabel("Log Likelihood")
-plt.grid(True)
+# # =====================================================
+# # FINAL CLUSTER ASSIGNMENTS
+# # =====================================================
+# clusters = responsibilities.argmax(axis=1)
 
 
-plt.savefig(
-    "images/log_likelihood.png",
-    dpi=300,
-    bbox_inches="tight"
-)
+# em, clusters, responsibilities, log_likelihood_history, cluster_mean_history, responsibility_history = run_em(X, 5, max_iter=100, tol=1e-6, seed=None)
+# print("\nFirst 10 assignments:")
 
-plt.show()
-plt.close()
+# print(clusters[:10])
 
-# =====================================================
-# VISUALIZATION 2
-# RESPONSIBILITY EVOLUTION
-# =====================================================
-plt.figure(figsize=(6,4))
+# # =====================================================
+# # VISUALIZATION 1
+# # LOG LIKELIHOOD
+# # =====================================================
+# plt.figure(figsize=(6,4))
 
-plt.plot(
-    responsibility_history,
-    marker="o"
-)
+# plt.plot(
+#     log_likelihood_history,
+#     marker="o"
+# )
 
-plt.title(
-    f"Responsibility Evolution\nSample {sample_index}"
-)
-
-plt.xlabel("Iteration")
-plt.ylabel("P(Cluster 0)")
-plt.grid(True)
-
-plt.savefig(
-    "images/responsibility_evolution.png",
-    dpi=300,
-    bbox_inches="tight"
-)
+# plt.title("EM Convergence")
+# plt.xlabel("Iteration")
+# plt.ylabel("Log Likelihood")
+# plt.grid(True)
 
 
-plt.show()
-plt.close()
-# =====================================================
-# VISUALIZATION 3
-# CLUSTER MEAN EVOLUTION
-# =====================================================
-plt.figure(figsize=(7,4))
+# plt.savefig(
+#     "images/log_likelihood.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
 
-for cluster in range(num_clusters):
+# plt.show()
+# plt.close()
 
-    plt.plot(
-        [
-            means[cluster, 0]
-            for means in cluster_mean_history
-        ],
-        label=f"Cluster {cluster}"
-    )
+# # =====================================================
+# # VISUALIZATION 2
+# # RESPONSIBILITY EVOLUTION
+# # =====================================================
+# plt.figure(figsize=(6,4))
 
-plt.title(
-    "Evolution of Cluster Means\n(First Feature)"
-)
+# plt.plot(
+#     responsibility_history,
+#     marker="o"
+# )
 
-plt.xlabel("Iteration")
-plt.ylabel("Mean Value")
-plt.legend()
-plt.grid(True)
+# plt.title(
+#     f"Responsibility Evolution\nSample {sample_index}"
+# )
 
-plt.savefig(
-    "images/cluster_mean_evolution.png",
-    dpi=300,
-    bbox_inches="tight"
-)
+# plt.xlabel("Iteration")
+# plt.ylabel("P(Cluster 0)")
+# plt.grid(True)
 
-plt.show()
-plt.close()
-# =====================================================
-# PCA VISUALIZATION
-# =====================================================
-pca = PCA(n_components=2)
+# plt.savefig(
+#     "images/responsibility_evolution.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
 
-X_2d = pca.fit_transform(X)
 
-plt.figure(figsize=(7,6))
+# plt.show()
+# plt.close()
+# # =====================================================
+# # VISUALIZATION 3
+# # CLUSTER MEAN EVOLUTION
+# # =====================================================
+# plt.figure(figsize=(7,4))
 
-plt.scatter(
-    X_2d[:,0],
-    X_2d[:,1]
-)
+# for cluster in range(num_clusters):
 
-plt.title("Before EM")
-plt.xlabel("PC1")
-plt.ylabel("PC2")
-plt.savefig(
-    "images/pca_before_em.png",
-    dpi=300,
-    bbox_inches="tight"
-)
-plt.show()
-plt.close()
+#     plt.plot(
+#         [
+#             means[cluster, 0]
+#             for means in cluster_mean_history
+#         ],
+#         label=f"Cluster {cluster}"
+#     )
 
-plt.figure(figsize=(7,6))
+# plt.title(
+#     "Evolution of Cluster Means\n(First Feature)"
+# )
 
-plt.scatter(
-    X_2d[:,0],
-    X_2d[:,1],
-    c=clusters,
-    s=50
-)
+# plt.xlabel("Iteration")
+# plt.ylabel("Mean Value")
+# plt.legend()
+# plt.grid(True)
 
-plt.title("Gene Clusters After EM")
-plt.xlabel("Principal Component 1")
-plt.ylabel("Principal Component 2")
-plt.colorbar(label="Cluster")
-plt.savefig(
-    "images/pca_after_em.png",
-    dpi=300,
-    bbox_inches="tight"
-)
-plt.show()
-plt.close()
+# plt.savefig(
+#     "images/cluster_mean_evolution.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
 
-# =====================================================
-# BIOLOGICAL INTERPRETATION
-# TF ENRICHMENT PER CLUSTER
-# =====================================================
-print("\n=== FINAL CLUSTER SUMMARY ===")
-is_tf_array = np.array(is_tf)
+# plt.show()
+# plt.close()
+# # =====================================================
+# # PCA VISUALIZATION
+# # =====================================================
+# pca = PCA(n_components=2)
 
-for k in range(num_clusters):
-    cluster_mask = clusters == k
-    cluster_size = cluster_mask.sum()
-    tf_in_cluster = (cluster_mask & is_tf_array).sum()
-    tf_enrichment = tf_in_cluster / cluster_size * 100
+# X_2d = pca.fit_transform(X)
+
+# plt.figure(figsize=(7,6))
+
+# plt.scatter(
+#     X_2d[:,0],
+#     X_2d[:,1]
+# )
+
+# plt.title("Before EM")
+# plt.xlabel("PC1")
+# plt.ylabel("PC2")
+# plt.savefig(
+#     "images/pca_before_em.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+# plt.show()
+# plt.close()
+
+# plt.figure(figsize=(7,6))
+
+# plt.scatter(
+#     X_2d[:,0],
+#     X_2d[:,1],
+#     c=clusters,
+#     s=50
+# )
+
+# plt.title("Gene Clusters After EM")
+# plt.xlabel("Principal Component 1")
+# plt.ylabel("Principal Component 2")
+# plt.colorbar(label="Cluster")
+# plt.savefig(
+#     "images/pca_after_em.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+# plt.show()
+# plt.close()
+
+# # =====================================================
+# # BIOLOGICAL INTERPRETATION
+# # TF ENRICHMENT PER CLUSTER
+# # =====================================================
+# print("\n=== FINAL CLUSTER SUMMARY ===")
+# is_tf_array = np.array(is_tf)
+
+# for k in range(num_clusters):
+#     cluster_mask = clusters == k
+#     cluster_size = cluster_mask.sum()
+#     tf_in_cluster = (cluster_mask & is_tf_array).sum()
+#     tf_enrichment = tf_in_cluster / cluster_size * 100
     
-    # top 5 gene names in this cluster
-    cluster_gene_names = [
-        gene_names[i] 
-        for i in range(len(gene_names)) 
-        if cluster_mask[i]
-    ][:5]
+#     # top 5 gene names in this cluster
+#     cluster_gene_names = [
+#         gene_names[i] 
+#         for i in range(len(gene_names)) 
+#         if cluster_mask[i]
+#     ][:5]
     
-    print(f"Cluster {k}: {cluster_size} genes | "
-          f"TFs: {tf_in_cluster} ({tf_enrichment:.1f}%) | "
-          f"samples: {cluster_gene_names}")
+#     print(f"Cluster {k}: {cluster_size} genes | "
+#           f"TFs: {tf_in_cluster} ({tf_enrichment:.1f}%) | "
+#           f"samples: {cluster_gene_names}")
     
-# =====================================================
-# GOLD STANDARD VALIDATION
-# =====================================================
-#DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv
-gs = load_gold_standard(
-    'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv'
-)
+# # =====================================================
+# # GOLD STANDARD VALIDATION
+# # =====================================================
+# #DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv
+# gs = load_gold_standard(
+#     'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv'
+# )
 
-# Map gene IDs to cluster assignments
-gene_to_cluster = dict(zip(gene_ids, clusters))
+# # Map gene IDs to cluster assignments
+# gene_to_cluster = dict(zip(gene_ids, clusters))
 
-# For each known TF-target pair, check if same cluster
-same_cluster = 0
-total_pairs = 0
+# # For each known TF-target pair, check if same cluster
+# same_cluster = 0
+# total_pairs = 0
 
-for _, row in gs.iterrows():
-    tf = row['tf']
-    target = row['target']
-    if tf in gene_to_cluster and target in gene_to_cluster:
-        total_pairs += 1
-        if gene_to_cluster[tf] == gene_to_cluster[target]:
-            same_cluster += 1
+# for _, row in gs.iterrows():
+#     tf = row['tf']
+#     target = row['target']
+#     if tf in gene_to_cluster and target in gene_to_cluster:
+#         total_pairs += 1
+#         if gene_to_cluster[tf] == gene_to_cluster[target]:
+#             same_cluster += 1
 
-co_cluster_rate = same_cluster / total_pairs * 100
+# co_cluster_rate = same_cluster / total_pairs * 100
 
-print(f"\n=== GOLD STANDARD VALIDATION ===")
-print(f"Known regulatory pairs evaluated: {total_pairs}")
-print(f"Pairs in same cluster: {same_cluster}")
-print(f"Co-clustering rate: {co_cluster_rate:.2f}%")
-print(f"\nBaseline (random, 5 clusters): ~20.00%")
-print(f"Your model: {co_cluster_rate:.2f}%")
+# print(f"\n=== GOLD STANDARD VALIDATION ===")
+# print(f"Known regulatory pairs evaluated: {total_pairs}")
+# print(f"Pairs in same cluster: {same_cluster}")
+# print(f"Co-clustering rate: {co_cluster_rate:.2f}%")
+# print(f"\nBaseline (random, 5 clusters): ~20.00%")
+# print(f"Your model: {co_cluster_rate:.2f}%")
 
-if co_cluster_rate > 20:
-    print("Result: EM clusters are enriched for known regulatory pairs")
-else:
-    print("Result: clusters do not significantly recover known regulation")
+# if co_cluster_rate > 20:
+#     print("Result: EM clusters are enriched for known regulatory pairs")
+# else:
+#     print("Result: clusters do not significantly recover known regulation")
 
 
 
@@ -350,14 +352,19 @@ em_net = EMNetworkInference(
 
 all_edges = []
 
-# Run on first 100 genes for speed
-# (full run on 4511 genes takes hours)
-target_genes_to_run = 100
-
-for gene_idx in range(target_genes_to_run):
+# Run on a random sample of non-TF genes for speed
+# (full run on all 4177 non-TF genes takes hours)
+# Random (seeded) sample instead of the first N in file order, so the
+# tested targets are representative rather than one contiguous block.
+target_genes_to_run = 300
+non_tf_indices = [i for i in range(len(gene_ids)) if not is_tf[i]]
+target_indices = np.random.default_rng(42).choice(
+    non_tf_indices, size=target_genes_to_run, replace=False
+)
+for i, gene_idx in enumerate(target_indices):
     gene_expr = X[gene_idx]
     gene_id = gene_ids[gene_idx]
-    
+
     edges = em_net.infer_edges_for_gene(
         gene_idx=gene_idx,
         gene_expr=gene_expr,
@@ -365,13 +372,13 @@ for gene_idx in range(target_genes_to_run):
         tf_gene_ids=tf_gene_ids,
         X=X
     )
-    
+
     for edge in edges:
         edge['target'] = gene_id
         all_edges.append(edge)
-    
-    if gene_idx % 10 == 0:
-        print(f"Processed {gene_idx}/{target_genes_to_run} genes")
+
+    if i % 20 == 0:
+        print(f"Processed {i}/{target_genes_to_run} genes")
 
 # Convert to dataframe
 edges_df = pd.DataFrame(all_edges)
@@ -565,6 +572,7 @@ print(f"Predicted repressions (beta<0): {(high_conf_edges['beta']<0).sum()}")
 # =====================================================
 # LEVEL 3: BAYESIAN NETWORK STRUCTURE LEARNING
 # (Friedman 2004 approach)
+# =====================================================
 
 print("\n=== FRIEDMAN BAYESIAN NETWORK INFERENCE ===")
 
@@ -574,10 +582,14 @@ bn = BayesianNetworkGRN(
     tf_indices=tf_indices
 )
 
+# Reuse the SAME random non-TF target sample as Level 2 (target_indices,
+# defined above) so the two levels are tested on identical genes and
+# directly comparable — otherwise differing target sets would confound
+# any Level 2 vs Level 3 comparison.
 bn_edges = bn.infer_network(
-    target_genes=100,
     max_parents=3,
-    verbose=True
+    verbose=True,
+    target_indices=target_indices
 )
 
 bn_edges_df = pd.DataFrame(bn_edges)
@@ -596,11 +608,13 @@ bn_edges_df.to_csv(
     'data/bayesian_network_edges.csv',
     index=False
 )
+print(f"\nSaved {len(bn_edges_df)} predicted edges (Bayesian Network)")
 
-# =====================================================
-# COMPARING: PAIRWISE EM vs BAYESIAN NETWORK
-# =====================================================
+# # =====================================================
+# # COMPARING: PAIRWISE EM vs BAYESIAN NETWORK
+# # =====================================================
 from data import load_gold_standard
+from scipy.stats import rankdata
 
 gs = load_gold_standard(
     'data/network_ecoli/test/DREAM5_NetworkInference_GoldStandard_Network3 - E. coli.tsv'
@@ -618,24 +632,72 @@ def compute_precision(predicted_df, tf_col, target_col, top_k=200):
     )
     return hits / top_k * 100
 
+edges_sorted = edges_df.sort_values(
+    'edge_probability', ascending=False
+).reset_index(drop=True)
+
 # precision of pairwise EM
-em_precision = compute_precision(
-    edges_df.sort_values(
-        'edge_probability', ascending=False
-    ),
-    'tf', 'target', top_k=200
-)
+em_precision = compute_precision(edges_sorted, 'tf', 'target', top_k=200)
 
-# checking precision of Bayesian Network
-bn_precision = compute_precision(
-    bn_edges_df,
-    'tf', 'target', top_k=200
+# Random baseline = density of true gold-standard edges within the
+# ACTUAL tested universe (this run's TFs x sampled targets), not the
+# full-genome gold-standard row count — the two are very different
+# sizes and only the former is a valid comparison for this run.
+tested_tfs = set(edges_sorted['tf'])
+tested_targets = set(edges_sorted['target'])
+gold_in_universe = sum(
+    1 for (tf, tg) in gold_pairs
+    if tf in tested_tfs and tg in tested_targets
 )
+total_tested_pairs = len(edges_sorted)
+random_baseline = gold_in_universe / total_tested_pairs * 100
 
-print(f"\n=== COMPARISON ===")
-print(f"Random baseline (top 200): ~{200/152280*100:.2f}%")
-print(f"Pairwise EM precision: {em_precision:.2f}%")
-print(f"Bayesian Network precision: {bn_precision:.2f}%")
+print(f"\n=== GOLD STANDARD VALIDATION (Pairwise EM) ===")
+print(f"Gold standard positive edges reachable in tested universe: "
+      f"{gold_in_universe} / {len(gold_pairs)}")
+print(f"Random baseline (density in tested universe): {random_baseline:.3f}%")
+print(f"Pairwise EM precision (top 200): {em_precision:.2f}%")
+
+# Bayesian Network outputs a small, FIXED set of selected edges (not a
+# continuous score over every pair like the pairwise EM), so "precision
+# @ top_k" doesn't apply the same way — precision/recall over ALL
+# selected edges is the correct fit here.
+bn_hits = sum(
+    1 for tf, tg in zip(bn_edges_df['tf'], bn_edges_df['target'])
+    if (tf, tg) in gold_pairs
+)
+bn_precision = bn_hits / len(bn_edges_df) * 100 if len(bn_edges_df) else 0.0
+bn_recall = bn_hits / gold_in_universe * 100 if gold_in_universe else 0.0
+
+print(f"\n=== GOLD STANDARD VALIDATION (Bayesian Network) ===")
+print(f"Bayesian Network selected edges: {len(bn_edges_df)}")
+print(f"Bayesian Network precision (over all selected edges): {bn_precision:.2f}%")
+print(f"Bayesian Network recall (of {gold_in_universe} reachable gold edges): "
+      f"{bn_recall:.2f}%")
+
+# AUROC + rank diagnostics — more reliable than precision@k when the
+# number of reachable true edges is small relative to top_k.
+edges_sorted['is_true'] = [
+    (tf, tg) in gold_pairs
+    for tf, tg in zip(edges_sorted['tf'], edges_sorted['target'])
+]
+n_true = int(edges_sorted['is_true'].sum())
+
+if n_true > 0:
+    scores = edges_sorted['edge_probability'].to_numpy()
+    is_true = edges_sorted['is_true'].to_numpy()
+    n_total = len(edges_sorted)
+    ranks = rankdata(scores)
+    auroc = (
+        (ranks[is_true].sum() - n_true * (n_true + 1) / 2)
+        / (n_true * (n_total - n_true))
+    )
+    median_rank = int(np.median(edges_sorted.index[is_true]))
+    print(f"AUROC: {auroc:.4f}  (0.5 = random, 1.0 = perfect)")
+    print(f"Median rank of true edges: {median_rank} / {n_total} "
+          f"(random expectation ~{n_total // 2})")
+else:
+    print("No gold-standard edges found in tested universe — cannot compute AUROC.")
 
 
 
@@ -648,8 +710,6 @@ BN_G = nx.DiGraph()
 
 # Use top 50 edges by BIC score
 top_bn_edges = bn_edges_df.head(50)
-
-id_to_name = dict(zip(gene_ids, gene_names))
 
 for _, row in top_bn_edges.iterrows():
     tf_name = id_to_name.get(row['tf'], row['tf'])
@@ -704,7 +764,6 @@ nx.draw_networkx_labels(
     font_weight='bold'
 )
 
-from matplotlib.patches import Patch
 legend_elements = [
     Patch(facecolor='#534AB7', label='Transcription Factor'),
     Patch(facecolor='#1D9E75', label='Target Gene')

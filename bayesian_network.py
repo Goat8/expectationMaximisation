@@ -111,23 +111,34 @@ class BayesianNetworkGRN:
         self,
         target_genes=100,
         max_parents=3,
-        verbose=True
+        verbose=True,
+        target_indices=None
     ):
         """
         running greedy hill climbing for each target gene.
         Returns predicted edges as a list of (TF, target, BIC_score).
+
+        target_indices: optional explicit list/array of gene indices to
+        use as targets (e.g. a random non-TF sample). If omitted, falls
+        back to the first `target_genes` genes by index (old behavior —
+        note this dataset lists all TFs first, so that default will only
+        test TF-TF pairs unless target_indices is provided explicitly).
         """
+        if target_indices is None:
+            target_indices = range(min(target_genes, self.n_genes))
+
         edges = []
-        
-        for i in range(min(target_genes, self.n_genes)):
-            if verbose and i % 20 == 0:
-                print(f"Processing gene {i}/{target_genes}")
-                
+        n_targets = len(target_indices)
+
+        for count, i in enumerate(target_indices):
+            if verbose and count % 20 == 0:
+                print(f"Processing gene {count}/{n_targets}")
+
             parents, score = self.greedy_hill_climbing(
                 target_idx=i,
                 max_parents=max_parents
             )
-            
+
             for parent_idx in parents:
                 edges.append({
                     'tf': self.gene_ids[parent_idx],
@@ -135,5 +146,5 @@ class BayesianNetworkGRN:
                     'bic_score': score,
                     'n_parents': len(parents)
                 })
-        
+
         return edges
